@@ -10,11 +10,11 @@ client: client.o
 	$(CC) -o $@ $^
 	rm -f $^
 
-server.o: server.c
-	$(CC) -Wall -g -c $^
+server.o: server.c echo.h
+client.o: client.c echo.h
 
-client.o: client.c
-	$(CC) -Wall -g -c $^ 
+.c.o:
+	$(CC) -Wall -g -c ${word 1, $^}
 
 clean:
 	rm -f server client

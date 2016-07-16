@@ -8,10 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-void err_func(char *msg) {
-  perror(msg);
-  exit(EXIT_FAILURE);
-}
+#include "echo.h"
 
 int main(int argc , char **argv) {
   int sockfd, len;
