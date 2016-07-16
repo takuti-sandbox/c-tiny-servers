@@ -41,6 +41,8 @@ int main(int argc , char **argv) {
     printf("> ");
     scanf("%s", sbuf);
 
+    if(strcmp(sbuf, "EXIT") == 0) break;
+
     // send a message to a server
     len = strlen(sbuf);
     sendto(sockfd, sbuf, len, 0, (struct sockaddr *)&server, addr_size);
@@ -50,8 +52,6 @@ int main(int argc , char **argv) {
     sbuf[len] = '\0';
 
     printf("%s\n", sbuf);
-
-    if(strcmp(sbuf, "EXIT") == 0) break;
   }
 
   close(sockfd);
