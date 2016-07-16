@@ -8,63 +8,54 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-//エラー処理関数
-void err_func(char *msg)
-{
+void err_func(char *msg) {
   perror(msg);
   exit(EXIT_FAILURE);
 }
 
-int main(int argc , char **argv){
-  int sockfd;
-  char sbuf[BUFSIZ];
-  int len;
-  struct sockaddr_in serv;
-  struct sockaddr_in sin;
-  socklen_t sin_size;
-  struct sockaddr_in clt;
-  char addr[]="127.0.0.1";
-  unsigned short port=1024;
-  unsigned short myport;
+int main(int argc , char **argv) {
+  int sockfd, len;
+  unsigned short server_port;
+  char sbuf[BUFSIZ], s_return[BUFSIZ + 100];
+  char *server_addr;
+  struct sockaddr_in server, client;
+  socklen_t addr_size = sizeof(struct sockaddr);
 
-  //コンパイルするときはパス・IP・ポート番号の３つを入力させたいのでargcは３になる
-  if(argc != 3)
-  {
-    printf("usage: progname serv_ip serv_port\n");
-    exit(EXIT_FAILURE);
+  if (argc != 3) err_func("Wrong usage `$ progname serv_ip serv_port`");
+
+  // open socket
+  if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) < 0) err_func("Cannot open socket");
+
+  // [src] server setting based on given command-line arguments
+  server.sin_family = PF_INET;
+  server_port = (unsigned short)atoi(argv[2]);
+  server.sin_port = htons(server_port);
+  server_addr = &argv[1][0];
+  inet_aton(server_addr, &(server.sin_addr));
+
+  // bind the specified server IP/port to the opening socket
+  if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0) err_func("Cannot bind server");
+
+  printf("Server %s:%d is now running.\n", server_addr, server_port);
+
+  // [dst] client setting as localhost:1024
+  client.sin_family = PF_INET;
+  client.sin_port = htons(1024);
+  inet_aton("127.0.0.1", &(client.sin_addr));
+
+  while (1) {
+    // receive a message from a client
+    len = recvfrom(sockfd, sbuf, BUFSIZ - 1, 0, (struct sockaddr *)&client, &addr_size);
+    sbuf[len] = '\0';
+
+    printf("Message from localhost: %s\n", sbuf);
+
+    // send (return) a message to localhost
+    sprintf(s_return, "[%s:%d] %s", server_addr, server_port, sbuf);
+    sendto(sockfd, s_return, strlen(s_return), 0, (struct sockaddr *)&client, addr_size);
   }
 
-  //socketシステムコール
-  if((sockfd=socket(PF_INET,SOCK_DGRAM,0))<0)
-    err_func("socket");
-
-  //bindシステムコール
-  sin.sin_family = PF_INET;                                   /* IPv4を指定*/
-  myport=(unsigned short)atoi(argv[2]);
-  sin.sin_port = htons(myport);                                 /* ポート番号の設定 */
-  inet_aton(argv[1], &(sin.sin_addr));                          /* IPアドレスの設定 */
-
-  if(bind(sockfd, (struct sockaddr *)&sin, sizeof(sin))<0)
-    err_func("bind");
-
-  while(1){
-  //recvfromシステムコール
-  sin_size = sizeof(struct sockaddr_in);
-  len = recvfrom(sockfd, sbuf, 255, 0, (struct sockaddr *)&clt, &sin_size);
-
-  sbuf[len]='\0';
-  printf("message from %s(%d)：%s\n",addr,port,sbuf);
-
-  //sendtoシステムコール
-  serv.sin_family = PF_INET;
-  serv.sin_port = htons(port);
-  inet_aton(addr, &(serv.sin_addr));
-
-  len = strlen(sbuf);
-  sendto(sockfd, sbuf, len, 0, (struct sockaddr *)&serv, sizeof(struct sockaddr));
-  }
-
-  close(sockfd);//ソケットの開放
+  close(sockfd);
 
   return 0;
 }
